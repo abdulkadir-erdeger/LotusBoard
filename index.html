@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="dark">
+  <title>LotusBoard — Kadro ve Taktik Tahtası</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Oswald:wght@500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ["Manrope", "sans-serif"],
+            display: ["Oswald", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: Manrope, sans-serif;
+      background:
+        radial-gradient(1200px 500px at 10% -10%, rgba(244, 63, 94, 0.16), transparent 50%),
+        radial-gradient(900px 480px at 100% 0%, rgba(228, 177, 90, 0.12), transparent 46%),
+        #07110c;
+    }
+    button, input, select, textarea { font: inherit; }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.16); border-radius: 999px; }
+    .tool-btn, .view-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.04);
+      color: #e7f5ec;
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .tool-btn.is-active, .view-btn.is-active {
+      background: #e4b15a;
+      color: #1c1408;
+      border-color: transparent;
+    }
+    .swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      border: 2px solid rgba(255,255,255,0.8);
+    }
+    .swatch.is-active { outline: 2px solid #e4b15a; outline-offset: 2px; }
+    .row {
+      display: grid;
+      grid-template-columns: 36px minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,0.03);
+      cursor: grab;
+    }
+    .row.is-selected {
+      background: rgba(228, 177, 90, 0.12);
+      border-color: rgba(228, 177, 90, 0.45);
+    }
+    .gk { --shirt: #f6c453; --shirt-dark: #b7791f; --ink: #1c1408; }
+    .def { --shirt: #3b82f6; --shirt-dark: #1e40af; --ink: #fff; }
+    .mid { --shirt: #2dd4bf; --shirt-dark: #0f766e; --ink: #042f2e; }
+    .fwd { --shirt: #fb7185; --shirt-dark: #9f1239; --ink: #fff; }
+    .away { --shirt: #f87171; --shirt-dark: #991b1b; --ink: #fff; }
+    .token {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .token.label-up { flex-direction: column-reverse; }
+    .token.label-side .nameplate {
+      position: absolute;
+      left: calc(100% + 6px);
+      top: 50%;
+      transform: translateY(-50%);
+    }
+    .jersey {
+      position: relative;
+      width: 52px;
+      height: 56px;
+      filter: drop-shadow(0 8px 5px rgba(0,0,0,0.38));
+    }
+    .jersey svg {
+      display: block;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+    }
+    .shirt-number {
+      position: absolute;
+      left: 50%;
+      top: 62%;
+      transform: translate(-50%, -50%);
+      font-family: Oswald, sans-serif;
+      font-size: 20px;
+      line-height: 1;
+      color: var(--ink);
+      text-shadow: 0 1px 0 rgba(255,255,255,0.18);
+    }
+    .jersey.mini {
+      width: 34px;
+      height: 36px;
+      filter: none;
+    }
+    .jersey.mini .shirt-number { font-size: 14px; top: 64%; }
+    .token.compact .jersey,
+    .token.away .jersey {
+      width: 42px;
+      height: 46px;
+    }
+    .token.compact .shirt-number,
+    .token.away .shirt-number { font-size: 16px; }
+    .token.compact .nameplate {
+      opacity: 0;
+    }
+    .token.compact.selected .nameplate,
+    .token.compact.hover .nameplate {
+      opacity: 1;
+    }
+    .ball-wrap::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      bottom: 1px;
+      width: 22px;
+      height: 6px;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.32);
+      border-radius: 50%;
+      filter: blur(1px);
+      z-index: -1;
+    }
+    .ball-wrap.selected svg {
+      filter: drop-shadow(0 0 1px #e4b15a) drop-shadow(0 0 6px rgba(228, 177, 90, 0.95)) drop-shadow(0 5px 3px rgba(0, 0, 0, 0.35));
+    }
+    .token.selected .jersey {
+      filter: drop-shadow(0 0 1px #e4b15a) drop-shadow(0 0 6px rgba(228,177,90,0.95)) drop-shadow(0 8px 5px rgba(0,0,0,0.38));
+    }
+    .token.snap .jersey {
+      filter: drop-shadow(0 0 1px #67e8f9) drop-shadow(0 0 6px rgba(103,232,249,0.9)) drop-shadow(0 8px 5px rgba(0,0,0,0.38));
+    }
+    .captain {
+      position: absolute;
+      top: 0;
+      right: 2px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: #e4b15a;
+      color: #1c1408;
+      font-family: Manrope, sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+    }
+    .nameplate {
+      max-width: 112px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(6, 14, 11, 0.82);
+      border: 1px solid rgba(255,255,255,0.14);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .ball-wrap svg {
+      width: 42px;
+      height: 42px;
+      filter: drop-shadow(0 5px 3px rgba(0, 0, 0, 0.35));
+    }
+    #pitch-root.orientation-horizontal #away-label {
+      left: auto;
+      right: 0.75rem;
+    }
+    #board-section:fullscreen,
+    #board-section.is-fullscreen {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-sizing: border-box;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 12px 16px 16px;
+      background:
+        radial-gradient(900px 420px at 0% 0%, rgba(244, 63, 94, 0.16), transparent 46%),
+        #07110c;
+    }
+    #board-section.is-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 80;
+    }
+    #board-section:fullscreen .pitch-frame,
+    #board-section.is-fullscreen .pitch-frame {
+      flex: 1;
+      min-height: 0;
+    }
+    #board-overlay { touch-action: none; }
+    #pitch-root, #pitch-root * { user-select: none; }
+    .pitch-canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+    #toast {
+      transform: translateY(12px);
+      opacity: 0;
+      pointer-events: none;
+      transition: 180ms ease;
+    }
+    #toast.show { transform: none; opacity: 1; }
+  </style>
+</head>
+<body class="h-screen overflow-hidden text-emerald-50">
+  <div class="flex h-full min-h-0 flex-col">
+    <header class="flex h-16 shrink-0 items-center justify-between gap-3 border-b border-white/10 bg-[#0c1914]/90 px-4 backdrop-blur">
+      <div class="flex min-w-0 items-center gap-3">
+        <svg viewBox="0 0 40 40" class="h-10 w-10 shrink-0" aria-hidden="true">
+          <circle cx="20" cy="20" r="18" fill="#10211a" stroke="#e4b15a" stroke-width="1.5"></circle>
+          <path d="M20 31c2.2-6 2.2-11 0-17-2.2 6-2.2 11 0 17z" fill="#fb7185"></path>
+          <path d="M20 28c7-1.5 12-6 14-13-7 2-11 6.5-14 13z" fill="#f43f5e"></path>
+          <path d="M20 28C13 26.5 8 22 6 15c7 2 11 6.5 14 13z" fill="#e11d48"></path>
+          <circle cx="20" cy="17" r="2.3" fill="#e4b15a"></circle>
+        </svg>
+        <div class="min-w-0">
+          <h1 class="font-display text-2xl leading-none tracking-wide">LOTUSBOARD</h1>
+          <p class="truncate text-xs text-emerald-100/60">Futbol kadrosu ve 2D taktik tahtası</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <span id="save-state" class="hidden text-xs text-emerald-100/50 sm:inline">Hazır</span>
+        <button id="undo-btn" type="button" class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10" disabled>Geri al</button>
+        <button id="redo-btn" type="button" class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10" disabled>İleri al</button>
+        <button id="save-btn" type="button" class="rounded-lg bg-[#e4b15a] px-3 py-2 text-sm font-semibold text-[#1c1408] hover:bg-[#f0c57a]">Kaydet</button>
+        <button id="export-btn" type="button" class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10">Dışa aktar</button>
+        <button id="import-btn" type="button" class="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm hover:bg-white/10">İçe aktar</button>
+        <input id="import-file" type="file" accept="application/json" class="hidden">
+        <button id="reset-btn" type="button" class="rounded-lg border border-rose-400/30 px-3 py-2 text-sm text-rose-200 hover:bg-rose-500/10">Sıfırla</button>
+      </div>
+    </header>
+
+    <main class="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[300px_minmax(0,1fr)_300px] lg:grid-rows-[minmax(0,1fr)] lg:overflow-hidden">
+      <aside class="flex min-h-0 flex-col gap-4 overflow-y-auto border-white/10 p-4 lg:border-r">
+        <label class="block">
+          <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-emerald-100/50">Takım</span>
+          <input id="team-name" maxlength="32" autocomplete="off" spellcheck="false" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 outline-none ring-[#e4b15a] focus:ring-2">
+        </label>
+        <label class="block">
+          <span class="mb-1 block text-xs font-semibold uppercase tracking-wider text-emerald-100/50">Formasyon</span>
+          <select id="formation" class="w-full rounded-xl border border-white/10 bg-[#0c1914] px-3 py-2 outline-none ring-[#e4b15a] focus:ring-2" title="Kaleci ilk sırada kalır. Diğer oyuncular slot sırasıyla yeni yerlerine gider."></select>
+        </label>
+        <p class="text-xs leading-5 text-emerald-100/50">Kaleci yerinde kalır. Formasyon değişince aynı slotdaki oyuncu yeni mevkiye gider. Yedeği bir ilk 11 satırının üzerine sürükleyebilirsin.</p>
+
+        <section>
+          <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-bold">İlk 11</h2>
+            <span class="text-xs text-emerald-100/50">Sahada</span>
+          </div>
+          <div id="squad-list" class="flex flex-col gap-2"></div>
+        </section>
+
+        <section>
+          <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-bold">Yedekler</h2>
+            <span id="bench-count" class="text-xs text-emerald-100/50"></span>
+          </div>
+          <div id="bench-list" class="flex flex-col gap-2"></div>
+          <form id="add-form" class="mt-3 grid grid-cols-[1fr_72px] gap-2">
+            <input id="add-name" maxlength="24" placeholder="Yeni oyuncu" autocomplete="off" class="col-span-2 rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-[#e4b15a] focus:ring-2">
+            <input id="add-number" type="number" min="1" max="99" class="rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-[#e4b15a] focus:ring-2">
+            <select id="add-role" class="rounded-xl border border-white/10 bg-[#0c1914] px-2 py-2 text-sm outline-none"></select>
+            <button type="submit" class="col-span-2 rounded-xl bg-white/10 py-2 text-sm font-semibold hover:bg-white/15">Yedeğe ekle</button>
+          </form>
+        </section>
+
+        <p class="text-xs leading-5 text-emerald-100/45">Renkler hattı gösterir: altın kaleci, mavi savunma, yeşil orta saha, kırmızı hücum. Rakip kırmızı formadadır.</p>
+      </aside>
+
+      <section id="board-section" class="flex min-h-0 min-w-0 flex-col gap-3 p-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" data-view="lineup" class="view-btn">Diziliş</button>
+          <button type="button" data-view="match" class="view-btn">Karşılaşma</button>
+          <button id="relayout-btn" type="button" class="tool-btn" title="Seçili görünümün formasyon noktalarına geri döner">Diz</button>
+          <span class="mx-1 hidden h-6 w-px bg-white/10 sm:inline"></span>
+          <button type="button" data-orient="vertical" class="view-btn" title="Kaleler altta ve üstte">Dikey</button>
+          <button type="button" data-orient="horizontal" class="view-btn" title="Kaleler solda ve sağda">Yatay</button>
+          <button id="fullscreen-btn" type="button" class="tool-btn" title="Diziliş tahtasını tam ekran aç (F)">Tam ekran</button>
+          <span class="mx-1 hidden h-6 w-px bg-white/10 sm:inline"></span>
+          <button type="button" data-tool="move" class="tool-btn" title="Taşı (V)">Taşı</button>
+          <button type="button" data-tool="pass" class="tool-btn" title="Pas oku (P)">Pas</button>
+          <button type="button" data-tool="run" class="tool-btn" title="Koşu yolu (K)">Koşu</button>
+          <button type="button" data-tool="zone" class="tool-btn" title="Bölge (B)">Bölge</button>
+          <button type="button" data-tool="erase" class="tool-btn" title="Silgi (E)">Sil</button>
+          <div class="ml-auto flex items-center gap-2">
+            <button type="button" data-color="#f8fafc" class="swatch bg-white" title="Beyaz"></button>
+            <button type="button" data-color="#f5d76e" class="swatch bg-[#f5d76e]" title="Sarı"></button>
+            <button type="button" data-color="#fb7185" class="swatch bg-[#fb7185]" title="Kırmızı"></button>
+            <button type="button" data-color="#67e8f9" class="swatch bg-[#67e8f9]" title="Mavi"></button>
+          </div>
+        </div>
+
+        <div class="pitch-frame relative min-h-[520px] flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#07140f] shadow-[0_24px_80px_rgba(0,0,0,0.35)] lg:min-h-0">
+          <div id="pitch-root" class="absolute inset-0">
+            <svg id="draw-layer" class="pointer-events-none absolute inset-0 z-10"></svg>
+            <div id="token-layer" class="pointer-events-none absolute inset-0 z-20"></div>
+            <div id="board-overlay" class="absolute inset-0 z-30"></div>
+            <div id="away-label" class="pointer-events-none absolute left-3 top-3 z-40 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold"></div>
+            <div id="home-label" class="pointer-events-none absolute bottom-3 left-3 z-40 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold"></div>
+            <div class="absolute bottom-3 right-3 z-40 flex gap-1">
+              <button id="zoom-out" type="button" data-ui class="rounded-lg bg-black/55 px-3 py-2 text-sm hover:bg-black/70" title="Uzaklaş">−</button>
+              <button id="zoom-reset" type="button" data-ui class="rounded-lg bg-black/55 px-3 py-2 text-sm hover:bg-black/70" title="Ortala">Ortala</button>
+              <button id="zoom-in" type="button" data-ui class="rounded-lg bg-black/55 px-3 py-2 text-sm hover:bg-black/70" title="Yakınlaş">+</button>
+            </div>
+          </div>
+        </div>
+        <p id="board-hint" class="text-xs leading-5 text-emerald-100/50">Taşı: oyuncu ve topu sürükle. Pas ve koşu oyuncuya veya topa yapışır. Tekerlek yakınlaştırır, sağ tuş kaydırır. F tam ekran, Ctrl+Z geri alır.</p>
+      </section>
+
+      <aside class="flex min-h-0 flex-col gap-4 overflow-y-auto border-white/10 p-4 lg:border-l">
+        <section class="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <h2 class="mb-3 text-sm font-bold">Rakip</h2>
+          <label class="mb-2 block">
+            <span class="mb-1 block text-xs text-emerald-100/50">Ad</span>
+            <input id="opponent-name" maxlength="32" autocomplete="off" class="w-full rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-[#e4b15a] focus:ring-2">
+          </label>
+          <label class="mb-3 block">
+            <span class="mb-1 block text-xs text-emerald-100/50">Formasyon</span>
+            <select id="opponent-formation" class="w-full rounded-xl border border-white/10 bg-[#0c1914] px-3 py-2 text-sm outline-none"></select>
+          </label>
+          <label class="flex items-center gap-2 text-sm">
+            <input id="show-opponent" type="checkbox" class="h-4 w-4 accent-[#e4b15a]">
+            Rakibi sahada göster
+          </label>
+        </section>
+
+        <section class="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <h2 class="mb-3 text-sm font-bold">Top</h2>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-ball="center" class="rounded-xl bg-white/5 px-2 py-2 text-xs hover:bg-white/10">Orta saha</button>
+            <button type="button" data-ball="own-pen" class="rounded-xl bg-white/5 px-2 py-2 text-xs hover:bg-white/10">Kendi penaltısı</button>
+            <button type="button" data-ball="opp-pen" class="rounded-xl bg-white/5 px-2 py-2 text-xs hover:bg-white/10">Rakip penaltısı</button>
+            <button type="button" data-ball="corner-l" class="rounded-xl bg-white/5 px-2 py-2 text-xs hover:bg-white/10">Sol korner</button>
+            <button type="button" data-ball="corner-r" class="col-span-2 rounded-xl bg-white/5 px-2 py-2 text-xs hover:bg-white/10">Sağ korner</button>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <h2 class="mb-3 text-sm font-bold">Seçili</h2>
+          <div id="inspector"></div>
+        </section>
+
+        <section class="rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-bold">Taktik notu</h2>
+            <span class="text-xs text-emerald-100/50"><span id="drawing-count">0</span> çizim</span>
+          </div>
+          <textarea id="note" rows="6" maxlength="2000" placeholder="Pres, çıkış, duran top..." class="w-full resize-none rounded-xl border border-white/10 bg-black/20 px-3 py-2 text-sm outline-none ring-[#e4b15a] focus:ring-2"></textarea>
+          <button id="clear-drawings" type="button" class="mt-2 w-full rounded-xl bg-white/5 py-2 text-sm hover:bg-white/10">Çizimleri temizle</button>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite" class="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full bg-[#e4b15a] px-4 py-2 text-sm font-semibold text-[#1c1408]"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js"
+      }
+    }
+  </script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
