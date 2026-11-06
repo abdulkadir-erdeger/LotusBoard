@@ -6,4 +6,4 @@
 
 ## 📸 Ekran Görüntüsü
 
-![LotusBoard Ekran Görüntüsü](assets/Resim.png)
+![LotusBoard Ekran Görüntüsü](assets/Resim1.png)
